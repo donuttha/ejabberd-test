@@ -1,0 +1,20 @@
+{% block script %}
+{% endblock %}
+
+{% load conversejs %}
+<head>
+  {% conversejs_static %}
+    <title></title>
+</head>
+
+{% block content %}
+<body>
+<br/>
+    <textarea id="txt_chatbox" name="txt_chatbox"></textarea>&nbsp;&nbsp;
+    {#        <input type="text" id="chat_box" name="chat_box" />#}
+    <input type="button" id="btn_ok" name="btn_ok" value="SEND" />
+
+{% conversejs_chatpanel %}
+{% conversejs_initialize %}
+</body>
+{% endblock %}
