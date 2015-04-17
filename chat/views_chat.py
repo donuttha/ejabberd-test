@@ -74,7 +74,7 @@ def chat_page(request):
 def sent_meaasge(message):
     return message
 
-#http://stackoverflow.com/questions/27684172/sleekxmpp-with-django-not-working
+
 from rest_framework.views import APIView
 class SendMessageView(APIView,sleekxmpp.ClientXMPP):
 
