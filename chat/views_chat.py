@@ -1,3 +1,5 @@
+
+
 __author__ = 'nuttha'
 from django.http import HttpResponse
 from django.shortcuts import render_to_response
@@ -32,36 +34,10 @@ class RegisterBot(sleekxmpp.ClientXMPP):
 
     def __init__(self, jid, password):
         sleekxmpp.ClientXMPP.__init__(self, jid, password)
-
-        # The session_start event will be triggered when
-        # the bot establishes its connection with the server
-        # and the XML streams are ready for use. We want to
-        # listen for this event so that we we can initialize
-        # our roster.
         self.add_event_handler("session_start", self.start, threaded=True)
-
-        # The register event provides an Iq result stanza with
-        # a registration form from the server. This may include
-        # the basic registration fields, a data form, an
-        # out-of-band URL, or any combination. For more advanced
-        # cases, you will need to examine the fields provided
-        # and respond accordingly. SleekXMPP provides plugins
-        # for data forms and OOB links that will make that easier.
         self.add_event_handler("register", self.register, threaded=True)
 
     def start(self, event):
-        """
-        Process the session_start event.
-
-        Typical actions for the session_start event are
-        requesting the roster and broadcasting an initial
-        presence stanza.
-
-        Arguments:
-            event -- An empty dictionary. The session_start
-                     event does not provide any additional
-                     data.
-        """
         self.send_presence()
         self.get_roster()
 
@@ -69,23 +45,6 @@ class RegisterBot(sleekxmpp.ClientXMPP):
         self.disconnect()
 
     def register(self, iq):
-        """
-        Fill out and submit a registration form.
-
-        The form may be composed of basic registration fields, a data form,
-        an out-of-band link, or any combination thereof. Data forms and OOB
-        links can be checked for as so:
-
-        if iq.match('iq/register/form'):
-            # do stuff with data form
-            # iq['register']['form']['fields']
-        if iq.match('iq/register/oob'):
-            # do stuff with OOB URL
-            # iq['register']['oob']['url']
-
-        To get the list of basic registration fields, you can use:
-            iq['register']['fields']
-        """
         resp = self.Iq()
         resp['type'] = 'set'
         resp['register']['username'] = self.boundjid.user
@@ -106,72 +65,88 @@ class RegisterBot(sleekxmpp.ClientXMPP):
 
 def chat_page(request):
     username = '1406523281117@chat-en.shooppening.com'
+    password='qqqqqqqq'
+    server=''
+    #authenticate(username,password,server)
 
-    optp = OptionParser()
-
-    # Output verbosity options.
-    optp.add_option('-q', '--quiet', help='set logging to ERROR',
-                    action='store_const', dest='loglevel',
-                    const=logging.ERROR, default=logging.INFO)
-    optp.add_option('-d', '--debug', help='set logging to DEBUG',
-                    action='store_const', dest='loglevel',
-                    const=logging.DEBUG, default=logging.INFO)
-    optp.add_option('-v', '--verbose', help='set logging to COMM',
-                    action='store_const', dest='loglevel',
-                    const=5, default=logging.INFO)
-
-    # JID and password options.
-    optp.add_option("-j", "--jid", dest="jid",
-                    help="JID to use")
-    optp.add_option("-p", "--password", dest="password",
-                    help="password to use")
-
-    opts, args = optp.parse_args()
-
-    # Setup logging.
-    logging.basicConfig(level=opts.loglevel,
-                        format='%(levelname)-8s %(message)s')
-
-    if opts.jid is None:
-        opts.jid = raw_input("Username: ")
-    if opts.password is None:
-        opts.password = getpass.getpass("Password: ")
-
-    # Setup the RegisterBot and register plugins. Note that while plugins may
-    # have interdependencies, the order in which you register them does
-    # not matter.
-    xmpp = RegisterBot(opts.jid, opts.password)
-    xmpp.register_plugin('xep_0030') # Service Discovery
-    xmpp.register_plugin('xep_0004') # Data forms
-    xmpp.register_plugin('xep_0066') # Out-of-band Data
-    xmpp.register_plugin('xep_0077') # In-band Registration
-
-    # Some servers don't advertise support for inband registration, even
-    # though they allow it. If this applies to your server, use:
-    xmpp['xep_0077'].force_registration = True
-
-    # If you are working with an OpenFire server, you may need
-    # to adjust the SSL version used:
-    # xmpp.ssl_version = ssl.PROTOCOL_SSLv3
-
-    # If you want to verify the SSL certificates offered by a server:
-    # xmpp.ca_certs = "path/to/ca/cert"
-
-    # Connect to the XMPP server and start processing XMPP stanzas.
-    if xmpp.connect():
-        # If you do not have the dnspython library installed, you will need
-        # to manually specify the name of the server if it does not match
-        # the one in the JID. For example, to use Google Talk you would
-        # need to use:
-        #
-        # if xmpp.connect(('talk.google.com', 5222)):
-        #     ...
-        xmpp.process(block=True)
-        print("Done")
-    else:
-        print("Unable to connect.")
-    return render_to_response('chat_pages.html',
-                                {"foo": "bar"})
+    return render_to_response('chat_pages.html',{"text": "text"})
 
 def sent_meaasge(message):
     return message
+
+#http://stackoverflow.com/questions/27684172/sleekxmpp-with-django-not-working
+from rest_framework.views import APIView
+class SendMessageView(APIView,sleekxmpp.ClientXMPP):
+
+    def session_start(self,jid, password, recipient, message):
+        sleekxmpp.ClientXMPP.__init__(self, jid, password)
+        self.xmpp = sleekxmpp.ClientXMPP(jid, password)
+        self.recipient = recipient
+        self.msg = message
+        self.add_event_handler("session_start", self.start)
+
+    def start(self, event):
+        self.send_presence()
+        try:
+            self.get_roster()
+        except IqError as err:
+            logging.error('There was an error getting the roster')
+            logging.error(err.iq['error']['condition'])
+            self.disconnect()
+        except IqTimeout:
+            logging.error('Server is taking too long to respond')
+            self.disconnect()
+
+        self.send_message(mto=self.recipient,mbody=self.msg,mtype='chat')
+        self.disconnect(wait=True)
+
+    def post(self,request,format=None):
+
+        jid=request.DATA.get('sender')
+        password=request.DATA.get('password')
+        receiver=request.DATA.get('receiver')
+        message=request.DATA.get('message')
+        # xmpp=self.aaaa(jid,password,receiver,message)
+        xmpp = self.get_xmpp(jid,password,receiver,message)
+        xmpp.register_plugin('xep_0030')
+        xmpp.register_plugin('xep_0199')
+        if xmpp.connect():
+            xmpp.process(block=False)
+            print "Connected"
+        else:
+            print "Not Connected"
+
+class ChatClient(sleekxmpp.ClientXMPP):
+    def __init__(self, jid, password, server):
+        sleekxmpp.ClientXMPP.__init__(self, '1406523281117@chat-en.shooppening.com', password,True)
+
+        self.add_event_handler("session_start", self.start)
+
+        self.register_plugin('xep_0030')
+        self.register_plugin('xep_0004')
+        self.register_plugin('xep_0060')
+        self.register_plugin('xep_0199')
+
+        # self.ssl_version = ssl.PROTOCOL_SSLv3
+        self.connected = self.connect()
+        if self.connected:
+            self.process(threaded=True)
+
+
+    def start(self, event):
+        self.send_presence(priority = "-9001")
+        self.get_roster(blocking = True, timeout = 3)
+
+    def message(self, targets, msg):
+        for target in targets:
+            self.send_message(target, msg)
+
+def authenticate(username='1406523281117@chat-en.shooppening.com', password='qqqqqqqq', server=''):
+    xmppuser = username + '@' + server
+    passTester = ChatClient(xmppuser, password, server)
+    try:
+        result = passTester.auth_queue.get(timeout=10)
+    except:
+        result = 'failed'
+    passTester.disconnect()
+    return result == 'success'

@@ -55,9 +55,9 @@ ROOT_URLCONF = 'ejabberd.urls'
 
 WSGI_APPLICATION = 'ejabberd.wsgi.application'
 
-CONVERSEJS_BOSH_SERVICE_URL = 'https://my-bosh-service.com'
+CONVERSEJS_BOSH_SERVICE_URL = 'http://chat-en.shooppening.com:5280'
 
-CONVERSEJS_AUTO_REGISTER = 'xmpp.mycompany.com'
+CONVERSEJS_AUTO_REGISTER = 'chat-en.shooppening.com:5280'
 
 # Database
 # https://docs.djangoproject.com/en/1.7/ref/settings/#databases
